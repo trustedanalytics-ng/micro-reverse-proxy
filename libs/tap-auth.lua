@@ -42,7 +42,6 @@ function M.auth()
 end  
 
 function M.verify(public_key, token)
-      ngx.log(ngx.WARN, "*********** " .. public_key)
   jwt:set_alg_whitelist({RS256 = 1})
   local jwt_obj = jwt:verify(public_key, token, M.claims())
   table.foreach(jwt_obj, function(k,v) ngx.log(ngx.INFO, tostring(k) .. "=>" .. tostring(v)) end)
