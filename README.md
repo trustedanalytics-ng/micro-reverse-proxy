@@ -13,6 +13,11 @@ Building docker image containing openresty with required lua libraries:
  https://github.com/doujiang24/lua-resty-rsa (RSA encryption functions)
 ```
 
+Before start building you have to get base image. Bellow you can find link to repo with scripts that facilitate that.:
+```
+https://github.com/intel-data/tapng-base-images/tree/master/binary/binary-jessie
+```
+
 Docker image is build in two steps:
 
 * First, prepare environment for compiling openresty. (docker run starts compilation, binaries goes to target dir.)
@@ -48,7 +53,7 @@ or
 ```
 docker run -e JWT_PUBLIC_KEY_FILE='/tmp/key.pem' -e USER_ID='dfde9e8c-b527-4bba-9331-66045df87af3' --volume="$PWD/conf:/root/conf" --volume="$PWD/logs/:/root/logs" --volume="$PWD/libs:/libs" --volume="$PWD/tmp:/tmp" --volume="/etc/krb5.conf:/etc/krb5.conf" --volume="/var/krb5kdc/cacert.pem:/var/krb5kdc/cacert.pem" --net=poligonnet --ip 172.18.0.6 --dns=172.17.0.1 -h nginx.localnet --name "nginx" -p 8081:8080 -d -t  openresty:2.0
 ```
-
+For correctnes verification you can use this example commands:
 ```
 curl -H "Authorization: Bearer `uaac context jojo | grep access_token | sed -e 's/access_token\:\ //' | sed -e 's/^[ \t]*//'`" -X GET http://nginx.localnet:8080
 wscat -H "Authorization: Bearer `uaac context jojo | grep access_token | sed -e 's/access_token\:\ //' | sed -e 's/^[ \t]*//'`" -c ws://nginx.localnet:8080/websockets
