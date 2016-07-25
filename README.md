@@ -35,6 +35,8 @@ Environment variables:
 *  JWT_PUBLIC_KEY - uaa public key (i.e.: '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqh...\n-----END PUBLIC KEY-----')
 *  JWT_PUBLIC_KEY_FILE - uaa public key file location
 *  USER_ID - uaa user id authorized for access to guarded application
+*  NB_USER - user name that nginx processes run with (default: vcap)
+*  NB_UID - user id that nginx processes run with (default: 1000)
 
 Shared volumes:
 *  /root/conf - nginx configuration, place to put nginx.conf
