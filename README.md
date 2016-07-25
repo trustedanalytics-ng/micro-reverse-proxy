@@ -41,7 +41,7 @@ Environment variables:
 Shared volumes:
 *  /root/conf - nginx configuration, place to put nginx.conf
 *  /root/logs - directory for nginx error, access logs
-*  /root/libs - directory for tap-auth module code
+*  /libs - directory for tap-auth module code
 *  /etc/krb5.conf - kerberos client configuratin
 *  /var/krb5kdc/cacert.pem certificat used in pre-authentication phase
 *  /tmp - directory that holds obtained kerberos credentials (krb5cc)
