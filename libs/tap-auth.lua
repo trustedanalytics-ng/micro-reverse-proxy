@@ -56,9 +56,9 @@ function M.claims()
 end 
 
 function M.ktinit(token) 
- local cmd = string.format("ktinit -t %s -c %s", token, "/tmp/krb5cc")
+  local cmd = string.format("ktinit -t %s -c %s", token, "/tmp/krb5cc")
   ngx.log(ngx.INFO, cmd)
- return os.execute(cmd)
+  return os.execute(cmd)
 end
 
 return M
