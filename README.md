@@ -37,6 +37,9 @@ Environment variables:
 *  USER_ID - uaa user id authorized for access to guarded application
 *  NB_USER - user name that nginx processes run with (default: vcap)
 *  NB_UID - user id that nginx processes run with (default: 1000)
+*  OAUTH_CLIENT_ID - oauth client id
+*  OAUTH_CLIENT_SECRET - oauth client secret
+*  UAA_URL - uaa
 
 Shared volumes:
 *  /root/conf - nginx configuration, place to put nginx.conf
@@ -53,7 +56,7 @@ docker run -e JWT_PUBLIC_KEY=$'-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqh...\n---
 ```
 or
 ```
-docker run -e JWT_PUBLIC_KEY_FILE='/tmp/key.pem' -e USER_ID='abf116c7-e03b-4c94-a574-df537173b9d4' --volume="$PWD/conf:/root/conf" --volume="$PWD/logs/:/root/logs" --volume="$PWD/libs:/libs" --volume="$PWD/tmp:/tmp" --volume="/etc/krb5.conf:/etc/krb5.conf" --volume="/var/krb5kdc/cacert.pem:/var/krb5kdc/cacert.pem" --net=poligonnet --ip 172.18.0.6 --dns=172.17.0.1 -h nginx.localnet --name "nginx" -p 8081:8080 -d -t  openresty:2.01
+docker run -e JWT_PUBLIC_KEY_FILE='/tmp/key.pem' -e OAUTH_CLIENT_ID='nginx' -e OAUTH_CLIENT_SECRET='nginxsecret' -e USER_ID='abf116c7-e03b-4c94-a574-df537173b9d4' --volume="$PWD/conf:/root/conf" --volume="$PWD/logs/:/root/logs" --volume="$PWD/libs:/libs" --volume="$PWD/tmp:/tmp" --volume="/etc/krb5.conf:/etc/krb5.conf" --volume="/var/krb5kdc/cacert.pem:/var/krb5kdc/cacert.pem" --net=poligonnet --ip 172.18.0.6 --dns=172.17.0.1 -h nginx.localnet --name "nginx" -p 8081:8080 -d -t  openresty:2.01
 ```
 For correctnes verification you can use this example commands:
 ```
