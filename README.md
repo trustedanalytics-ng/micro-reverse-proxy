@@ -39,7 +39,8 @@ Environment variables:
 *  NB_UID - user id that nginx processes run with (default: 1000)
 *  OAUTH_CLIENT_ID - oauth client id
 *  OAUTH_CLIENT_SECRET - oauth client secret
-*  UAA_URL - uaa
+*  UAA_URL - uaa url
+*  SESSION_ID_SEED - seed used for generating session id
 
 Shared volumes:
 *  /root/conf - nginx configuration, place to put nginx.conf

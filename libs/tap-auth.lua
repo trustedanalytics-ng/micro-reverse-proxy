@@ -40,6 +40,7 @@ function private.retriveTokens()
 end
 
 local function oauth()
+	session:verify()
 	local access_token = session:get_access_token()
 	local refresh_token = session:get_refresh_token()
 	if access_token ~= nil then
@@ -56,9 +57,12 @@ local function oauth()
 		access_token,refresh_token = private.retriveTokens()
 		session:set_access_token(access_token)
 		session:set_refresh_token(refresh_token)
+		local status, err = private.ktinit(access_token)
+		session:cookie()
 	end
 end
 
+--[[
 local function auth()
 	local auth_header = ngx.var.http_Authorization
 	local public_key = private.getCACert()
@@ -84,6 +88,7 @@ local function auth()
 		ngx.exit(ngx.HTTP_UNAUTHORIZED)
 	end
 end
+]]
 
 function private.getCACert()
 	-- 1. get uaa public key from env
@@ -124,31 +129,6 @@ function private.claims()
 		exp = validators.is_not_expired(),
 		user_id = validators.equals(config.uid)
 	}
-end
-
-function private.ktinit(token)
-	local cmd = string.format("ktinit -t %s -c %s", token, "/tmp/krb5cc")
-	local exit_code = os.execute(cmd)
-	if exit_code ~= 0 then
-		error(string.format("Execution failed: %s, [exit code: %02d]", cmd, exit_code))
-	else
-		return exit_code
-	end
-end
-
-function private.session(token)
-	local session_id = ngx.var.cookie_session;
-	if session_id == nil then
-		local expires = 60 * 5 -- five minutes
-		local status, err = private.ktinit(token)
-		--TODO generate session id
-		session_id = config.uid
-		ngx.header["Set-Cookie"] =
-		string.format("session=%s; Path=/; Expires=%s",
-			session_id,
-			ngx.cookie_time(ngx.time() + expires))
-	end
-	return session_id
 end
 
 M.auth = auth
