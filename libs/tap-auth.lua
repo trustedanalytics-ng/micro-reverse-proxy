@@ -11,7 +11,7 @@ local function setConfig(conf)
 	config = conf
 end
 
-function private.getUaaUrl()
+function private.getRedirectUri()
 	return "http://nginx.localnet:8080"
 end
 
@@ -21,7 +21,7 @@ function private.retriveTokens()
 	local result
 	if authCode == nil then
 		ngx.redirect("/uaa/oauth/authorize?client_id=" .. config.client_id ..
-				"&redirect_uri=".. private.getUaaUrl() ..
+				"&redirect_uri=".. private.getRedirectUri() ..
 				"&response_type=code")
 	end
 
@@ -33,75 +33,38 @@ function private.retriveTokens()
 				"&client_id=" .. config.client_id ..
 				"&client_secret=" .. config.client_secret ..
 				"&response_type=token" ..
-				"&redirect_uri=" .. private.getUaaUrl()})
+				"&redirect_uri=" .. private.getRedirectUri()})
 	assert(res ~= nil, "Cant retrive access token!")
 	local resp = cjson.decode(res.body)
 	return resp.access_token, resp.refresh_token
 end
 
 local function oauth()
-	session:verify()
-	local access_token = session:get_access_token()
-	local refresh_token = session:get_refresh_token()
-	if access_token ~= nil then
-		local public_key = private.getCACert()
-		ngx.log(ngx.INFO, "Access token not found")
-		if not private.verify(public_key, access_token) then
-			ngx.log(ngx.WARN, "Authorization token not verified")
-			ngx.exit(ngx.HTTP_UNAUTHORIZED)
-		end
-	elseif refresh_token ~= nil then
-		--	TODO: implement refreshing access token
-	else
-		-- create user session and store access and refresh token
-		access_token,refresh_token = private.retriveTokens()
-		session:set_access_token(access_token)
-		session:set_refresh_token(refresh_token)
-		local status, err = private.ktinit(access_token)
-		session:cookie()
-	end
+	session:isValidSession()
+	       :aquireOauthTokens(private.retriveTokens)
+	       :checkAccess(private.checkIfAuthorizedMethod())
+	       :refreshTokenIfExpired(private.checkExpirationMethod())
+	       :cookie()
 end
-
---[[
-local function auth()
-	local auth_header = ngx.var.http_Authorization
-	local public_key = private.getCACert()
-	if auth_header == nil then
-		ngx.log(ngx.INFO, "No Authorization header")
-		ngx.exit(ngx.HTTP_UNAUTHORIZED)
-	end
-
-	local _, _, token = string.find(auth_header, "Bearer%s+(.+)")
-	if token == nil then
-		ngx.log(ngx.WARN, "Invalid authorization header - missing token")
-		ngx.exit(ngx.HTTP_UNAUTHORIZED)
-	end
-
-	if not private.verify(public_key, token) then
-		ngx.log(ngx.WARN, "Authorization token not verified")
-		ngx.exit(ngx.HTTP_UNAUTHORIZED)
-	end
-
-	local status, err = pcall(private.session, token)
-	if not status then
-		ngx.log(ngx.WARN, "Can't get kerberos ticket: " .. err)
-		ngx.exit(ngx.HTTP_UNAUTHORIZED)
-	end
-end
-]]
 
 function private.getCACert()
-	-- 1. get uaa public key from env
-	local pkey = config.public_key
-	if pkey == nil and config.public_key_file ~=nil then
-		-- 2. or from file, if file location is set
-		local f = io.open(config.public_key_file, "rb")
-		pkey = f:read("*all")
-		f:close()
-	end
+	local pkey = ngx.shared.public_key:get("pk")
 	if pkey == nil then
-		-- 3. or retrive it from uaa server
-		pkey = private.retriveCACertFromUaa()
+		-- 1. get uaa public key from env
+		pkey = config.public_key
+		ngx.shared.public_key:set("pk", pkey)
+		if pkey == nil and config.public_key_file ~= nil then
+			-- 2. or from file, if file location is set
+			local f = io.open(config.public_key_file, "rb")
+			pkey = f:read("*all")
+			f:close()
+			ngx.shared.public_key:set("pk", pkey)
+		end
+		if pkey == nil then
+			-- 3. or retrive it from uaa server
+			pkey = private.retriveCACertFromUaa()
+			ngx.shared.public_key:set("pk", pkey)
+		end
 	end
 	return pkey
 end
@@ -117,21 +80,41 @@ function private.retriveCACertFromUaa()
 	return pkey
 end
 
-function private.verify(public_key, token)
+function private.verify(public_key, token, claims)
 	jwt:set_alg_whitelist({ RS256 = 1 })
-	local jwt_obj = jwt:verify(public_key, token, private.claims())
+	local jwt_obj = jwt:verify(public_key, token, claims)
 	table.foreach(jwt_obj, function(k, v) ngx.log(ngx.INFO, tostring(k) .. "=>" .. tostring(v)) end)
 	return jwt_obj.verified
 end
 
-function private.claims()
+function private.identityClaims()
 	return {
-		exp = validators.is_not_expired(),
 		user_id = validators.equals(config.uid)
 	}
 end
 
-M.auth = auth
+function private.expirationClaims()
+	return {
+		exp = validators.is_not_expired()
+	}
+end
+
+function private.checkIfAuthorizedMethod()
+	local pk = private.getCACert()
+	return function(token)
+		ngx.log(ngx.INFO, "Check access method invocation!")
+		return private.verify(pk, token, private.identityClaims())
+	end
+end
+
+function private.checkExpirationMethod()
+	local pk = private.getCACert()
+	return function(token)
+		ngx.log(ngx.INFO, "Check token method invocation!")
+		return private.verify(pk, token, private.expirationClaims())
+	end
+end
+
 M.oauth = oauth
 M.setConfig = setConfig
 return M
