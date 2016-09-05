@@ -24,12 +24,13 @@ function SessionMgr.new(session_store, config)
 	return self
 end
 
-function SessionMgr:aquireOauthTokens(aquisitionMethod)
+function SessionMgr:aquireOauthTokens(aquisitionMethod, refreshMethod)
 	ngx.log(ngx.INFO, "SessionMgr:aquireOauthTokens!")
 	local session_id = ngx.var.cookie_session;
 	local access_token = self:get_access_token()
 	local refresh_token = self:get_refresh_token()
 	self.tokensAquisitionMethod = aquisitionMethod
+	self.accessTokenRefreshMethod = refreshMethod
 	if access_token == nil or
 			refresh_token == nil or
 			session_id == nil then
@@ -55,18 +56,19 @@ end
 function SessionMgr:refreshTokenIfExpired(checkIfNotExpired)
 	ngx.log(ngx.INFO, "SessionMgr:refreshTokenIfExpired")
 	local access_token = self:get_access_token()
+	ngx.log(ngx.INFO, "Access token: " .. access_token)
 	if not checkIfNotExpired(access_token) then
-		ngx.log(ngx.INFO, "Access token expired!")
+		ngx.log(ngx.INFO, "Access token expired! " .. access_token)
 		local refresh_token = self:get_refresh_token()
 		if not checkIfNotExpired(refresh_token) then
-			ngx.log(ngx.INFO, "Refresh token expired.")
+			ngx.log(ngx.INFO, "Refresh token expired. " .. refresh_token)
 			access_token,refresh_token = self.tokensAquisitionMethod()
 			self:set_access_token(access_token)
 			self:set_refresh_token(refresh_token)
 		else
-			-- TODO: implement refresh action
-			ngx.log(ngx.INFO, "Refreshing access token not yet implemented!")
-			ngx.exit(ngx.HTTP_UNAUTHORIZED)
+			ngx.log(ngx.INFO, "Refreshing access token using refresh token! " .. refresh_token)
+			local t = self.accessTokenRefreshMethod(refresh_token)
+			self:set_access_token(t)
 		end
 	end
 	return self
@@ -97,7 +99,7 @@ end
 function SessionMgr:cookie()
 	local session_id = ngx.var.cookie_session;
 	if session_id == nil then
-		local expires = 60 * 5 -- five minutes
+		local expires = 60 * 60 -- five minutes
 		session_id = self.session_id
 		ngx.header["Set-Cookie"] =
 		string.format("session=%s; Path=/; Expires=%s", session_id, ngx.cookie_time(ngx.time() + expires))

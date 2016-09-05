@@ -39,9 +39,21 @@ function private.retriveTokens()
 	return resp.access_token, resp.refresh_token
 end
 
+function private.refreshAccessToken(refreshToken)
+	ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
+	local res = ngx.location.capture("/uaa/oauth/token", {method = ngx.HTTP_POST,
+		body = "grant_type=refresh_token" ..
+				"&refresh_token=" .. refreshToken ..
+				"&client_id=" .. config.client_id ..
+				"&client_secret=" .. config.client_secret})
+	assert(res ~= nil, "Cant retrive access token!")
+	local resp = cjson.decode(res.body)
+	return resp.access_token
+end
+
 local function oauth()
 	session:isValidSession()
-	       :aquireOauthTokens(private.retriveTokens)
+	       :aquireOauthTokens(private.retriveTokens, private.refreshAccessToken)
 	       :checkAccess(private.checkIfAuthorizedMethod())
 	       :refreshTokenIfExpired(private.checkExpirationMethod())
 	       :cookie()
