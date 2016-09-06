@@ -20,55 +20,44 @@ function SessionMgr.new(session_store, config)
 	md5Inst:update(config.session_seed)
 	local digest = md5Inst:final()
 	self.session_id = str.to_hex(digest)
+
 	self.store = session_store
+	self.access_token = nil
+	self.refresh_token = nil
 	return self
 end
 
 function SessionMgr:aquireOauthTokens(aquisitionMethod, refreshMethod)
-	ngx.log(ngx.INFO, "SessionMgr:aquireOauthTokens!")
 	local session_id = ngx.var.cookie_session;
-	local access_token = self:get_access_token()
-	local refresh_token = self:get_refresh_token()
 	self.tokensAquisitionMethod = aquisitionMethod
 	self.accessTokenRefreshMethod = refreshMethod
-	if access_token == nil or
-			refresh_token == nil or
+	self.access_token = self:get_access_token();
+	self.refresh_token = self:get_refresh_token();
+	if self.access_token == nil or
+			self.refresh_token == nil or
 			session_id == nil then
-		access_token,refresh_token = aquisitionMethod()
-		self:set_access_token(access_token)
-		self:set_refresh_token(refresh_token)
+		  self.access_token,self.refresh_token = aquisitionMethod()
 	end
 	return self
 end
 
 function SessionMgr:checkAccess(hasAccess)
-	ngx.log(ngx.INFO, "SessionMgr:checkAccess")
-	local access_token = self:get_access_token()
-	if not hasAccess(access_token) then
-		ngx.log(ngx.WARN, "Not authorized access attempt!")
-		self:set_access_token(nil)
-		self:set_refresh_token(nil)
+	if not hasAccess(self.access_token) then
+		ngx.log(ngx.ERR, "Not authorized access attempt!")
 		ngx.exit(ngx.HTTP_UNAUTHORIZED)
 	end
 	return self
 end
 
 function SessionMgr:refreshTokenIfExpired(checkIfNotExpired)
-	ngx.log(ngx.INFO, "SessionMgr:refreshTokenIfExpired")
-	local access_token = self:get_access_token()
-	ngx.log(ngx.INFO, "Access token: " .. access_token)
-	if not checkIfNotExpired(access_token) then
-		ngx.log(ngx.INFO, "Access token expired! " .. access_token)
-		local refresh_token = self:get_refresh_token()
-		if not checkIfNotExpired(refresh_token) then
-			ngx.log(ngx.INFO, "Refresh token expired. " .. refresh_token)
-			access_token,refresh_token = self.tokensAquisitionMethod()
-			self:set_access_token(access_token)
-			self:set_refresh_token(refresh_token)
+	if not checkIfNotExpired(self.access_token) then
+		ngx.log(ngx.INFO, "Access token expired! " .. self.access_token)
+		if not checkIfNotExpired(self.refresh_token) then
+			ngx.log(ngx.INFO, "Refresh token expired. " .. self.refresh_token)
+			self.access_token,self.refresh_token = self.tokensAquisitionMethod()
 		else
-			ngx.log(ngx.INFO, "Refreshing access token using refresh token! " .. refresh_token)
-			local t = self.accessTokenRefreshMethod(refresh_token)
-			self:set_access_token(t)
+			ngx.log(ngx.INFO, "Refreshing access token using refresh token! " .. self.refresh_token)
+			self.access_token = self.accessTokenRefreshMethod(self.refresh_token)
 		end
 	end
 	return self
@@ -96,22 +85,35 @@ function SessionMgr:get_session_id()
 	return self.session_id
 end
 
-function SessionMgr:cookie()
+function SessionMgr:grantAccess(grantingAccessMethod)
 	local session_id = ngx.var.cookie_session;
 	if session_id == nil then
-		local expires = 60 * 60 -- five minutes
+		local expires = 60 * 60
 		session_id = self.session_id
 		ngx.header["Set-Cookie"] =
 		string.format("session=%s; Path=/; Expires=%s", session_id, ngx.cookie_time(ngx.time() + expires))
 	end
-	return session_id
+	local stored_access_token = self:get_access_token()
+	local stored_refresh_token = self:get_refresh_token()
+	if self.access_token ~= stored_access_token then
+		if grantingAccessMethod(self.access_token) ~= 0 then
+			ngx.log(ngx.ERR, "Granting access method error!")
+			ngx.exit(ngx.HTTP_UNAUTHORIZED)
+		else
+			self:set_access_token(self.access_token)
+		end
+	end
+	if self.refresh_token ~= stored_refresh_token then
+		self:set_refresh_token(self.refresh_token)
+	end
+	return self
 end
 
 function SessionMgr:isValidSession()
 	local session_id = ngx.var.cookie_session;
 	if session_id ~= nil
 			and session_id ~= self.session_id then
-		ngx.log(ngx.ERROR, "Probable attempt of attack - incorrect session id!")
+		ngx.log(ngx.ERR, "Probable attempt of attack - incorrect session id!")
 		ngx.exit(ngx.HTTP_UNAUTHORIZED)
 	end
 	return self

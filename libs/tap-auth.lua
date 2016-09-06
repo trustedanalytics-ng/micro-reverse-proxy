@@ -51,12 +51,12 @@ function private.refreshAccessToken(refreshToken)
 	return resp.access_token
 end
 
-local function oauth()
+local function oauth(session)
 	session:isValidSession()
 	       :aquireOauthTokens(private.retriveTokens, private.refreshAccessToken)
 	       :checkAccess(private.checkIfAuthorizedMethod())
 	       :refreshTokenIfExpired(private.checkExpirationMethod())
-	       :cookie()
+	       :grantAccess(private.ktinit)
 end
 
 function private.getCACert()
@@ -124,6 +124,17 @@ function private.checkExpirationMethod()
 	return function(token)
 		ngx.log(ngx.INFO, "Check token method invocation!")
 		return private.verify(pk, token, private.expirationClaims())
+	end
+end
+
+function private.ktinit(token)
+	local cmd = string.format("ktinit -t %s -c %s", token, "/tmp/krb5cc")
+	ngx.log(ngx.INFO, "Ktinit invocation!")
+	local exit_code =  os.execute(cmd)
+	if exit_code ~= 0 then
+		error(string.format("Execution failed: %s, [exit code: %02d]", cmd, exit_code))
+	else
+		return exit_code
 	end
 end
 
