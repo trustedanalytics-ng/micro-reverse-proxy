@@ -18,6 +18,7 @@ function Configuration.new()
 	self.client_id = os.getenv("OAUTH_CLIENT_ID")
 	self.client_secret = os.getenv("OAUTH_CLIENT_SECRET")
 	self.session_seed = os.getenv("SESSION_ID_SEED")
+	self.uaa = os.getenv("UAA_ADDRESS")
 
 	return self
 end

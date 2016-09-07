@@ -11,29 +11,31 @@ local function setConfig(conf)
 	config = conf
 end
 
+--[[
 function private.getRedirectUri()
 	return "http://nginx.localnet:8080"
 end
+]]
 
 function private.retriveTokens()
 	--	redirect user to uaa for obtaining authorization code
 	local authCode = ngx.var.arg_code
 	local result
 	if authCode == nil then
-		ngx.redirect("/uaa/oauth/authorize?client_id=" .. config.client_id ..
-				"&redirect_uri=".. private.getRedirectUri() ..
+		ngx.redirect("http://" .. config.uaa .. "/oauth/authorize?client_id=" .. config.client_id ..
+				--[["&redirect_uri=".. private.getRedirectUri() ..]]
 				"&response_type=code")
 	end
 
 	-- getting acces and refresh tokens based on authorization code
 	ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
-	local res = ngx.location.capture("/uaa/oauth/token", {method = ngx.HTTP_POST,
+	local res = ngx.location.capture("/oauth/token", {method = ngx.HTTP_POST,
 		body = "grant_type=authorization_code" ..
 				"&code=" .. authCode ..
 				"&client_id=" .. config.client_id ..
 				"&client_secret=" .. config.client_secret ..
-				"&response_type=token" ..
-				"&redirect_uri=" .. private.getRedirectUri()})
+				"&response_type=token" --[[..
+				"&redirect_uri=" .. private.getRedirectUri()]]})
 	assert(res ~= nil, "Cant retrive access token!")
 	local resp = cjson.decode(res.body)
 	return resp.access_token, resp.refresh_token
@@ -41,7 +43,7 @@ end
 
 function private.refreshAccessToken(refreshToken)
 	ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
-	local res = ngx.location.capture("/uaa/oauth/token", {method = ngx.HTTP_POST,
+	local res = ngx.location.capture("/oauth/token", {method = ngx.HTTP_POST,
 		body = "grant_type=refresh_token" ..
 				"&refresh_token=" .. refreshToken ..
 				"&client_id=" .. config.client_id ..
@@ -82,7 +84,7 @@ function private.getCACert()
 end
 
 function private.retriveCACertFromUaa()
-	local res = ngx.location.capture("/uaa/token_key",
+	local res = ngx.location.capture("/token_key",
 	{ method = ngx.HTTP_GET, args = {} })
 	local pkey
 	if res then
