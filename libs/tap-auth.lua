@@ -17,6 +17,29 @@ function private.getRedirectUri()
 end
 ]]
 
+function private.jsonRespDecode(response)
+	assert(response ~= nil, "Cant retrive token!")
+	if response.status == ngx.HTTP_OK then
+		local res = cjson.decode(response.body)
+		return res
+	elseif response.status == ngx.HTTP_REQUEST_TIMEOUT then
+		ngx.log(ngx.ERR, "UAA server connection timeout!")
+		ngx.exit(ngx.HTTP_UNAUTHORIZED)
+	elseif response.status == ngx.HTTP_BAD_REQUEST then
+		if response.body ~= nil then
+			local res = cjson.decode(response.body)
+			ngx.log(ngx.ERR, res.error .. " - " .. res.error_description)
+			ngx.exit(ngx.HTTP_UNAUTHORIZED)
+		end
+	elseif response.status == ngx.HTTP_UNAUTHORIZED then
+		ngx.log(ngx.ERR, "Bad credentials for oauth client (CLIENT_ID or/and CLIENT_SECRET)!")
+		ngx.exit(ngx.HTTP_UNAUTHORIZED)
+	else
+		ngx.log(ngx.ERR, "Unrecoginzed response from UAA server! [" .. response.status .. "]")
+		ngx.exit(ngx.HTTP_UNAUTHORIZED)
+	end
+end
+
 function private.retriveTokens()
 	--	redirect user to uaa for obtaining authorization code
 	local authCode = ngx.var.arg_code
@@ -28,7 +51,7 @@ function private.retriveTokens()
 	end
 
 	-- getting acces and refresh tokens based on authorization code
-	ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
+	ngx.req.set_header("content-type", "application/x-www-form-urlencoded;charset=utf-8")
 	local res = ngx.location.capture("/oauth/token", {method = ngx.HTTP_POST,
 		body = "grant_type=authorization_code" ..
 				"&code=" .. authCode ..
@@ -36,20 +59,18 @@ function private.retriveTokens()
 				"&client_secret=" .. config.client_secret ..
 				"&response_type=token" --[[..
 				"&redirect_uri=" .. private.getRedirectUri()]]})
-	assert(res ~= nil, "Cant retrive access token!")
-	local resp = cjson.decode(res.body)
+	local resp = private.jsonRespDecode(res)
 	return resp.access_token, resp.refresh_token
 end
 
 function private.refreshAccessToken(refreshToken)
-	ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
+	ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded;charset=utf-8")
 	local res = ngx.location.capture("/oauth/token", {method = ngx.HTTP_POST,
 		body = "grant_type=refresh_token" ..
 				"&refresh_token=" .. refreshToken ..
 				"&client_id=" .. config.client_id ..
 				"&client_secret=" .. config.client_secret})
-	assert(res ~= nil, "Cant retrive access token!")
-	local resp = cjson.decode(res.body)
+	local resp = private.jsonRespDecode(res)
 	return resp.access_token
 end
 
@@ -84,14 +105,10 @@ function private.getCACert()
 end
 
 function private.retriveCACertFromUaa()
-	local res = ngx.location.capture("/token_key",
+	local resp = ngx.location.capture("/token_key",
 	{ method = ngx.HTTP_GET, args = {} })
-	local pkey
-	if res then
-		local resp = cjson.decode(res.body)
-		pkey = resp.value
-	end
-	return pkey
+	local res = private.jsonRespDecode(resp)
+	return res.value
 end
 
 function private.verify(public_key, token, claims)
