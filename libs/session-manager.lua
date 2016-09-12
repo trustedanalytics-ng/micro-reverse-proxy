@@ -4,7 +4,7 @@ SessionMgr.__index = SessionMgr
 setmetatable(SessionMgr, {
 	__call = function (cls, ...)
 		return cls.new(...)
-end,
+	end,
 })
 
 function SessionMgr.new(session_store, config)
@@ -43,8 +43,7 @@ end
 
 function SessionMgr:checkAccess(hasAccess)
 	if not hasAccess(self.access_token) then
-		ngx.log(ngx.ERR, "Not authorized access attempt!")
-		ngx.exit(ngx.HTTP_UNAUTHORIZED)
+		self.terminate("Not authorized access attempt!")
 	end
 	return self
 end
@@ -97,8 +96,7 @@ function SessionMgr:grantAccess(grantingAccessMethod)
 	local stored_refresh_token = self:get_refresh_token()
 	if self.access_token ~= stored_access_token then
 		if grantingAccessMethod(self.access_token) ~= 0 then
-			ngx.log(ngx.ERR, "Granting access method error!")
-			ngx.exit(ngx.HTTP_UNAUTHORIZED)
+			self.terminate("Granting access method error!")
 		else
 			self:set_access_token(self.access_token)
 		end
@@ -113,8 +111,12 @@ function SessionMgr:isValidSession()
 	local session_id = ngx.var.cookie_session;
 	if session_id ~= nil
 			and session_id ~= self.session_id then
-		ngx.log(ngx.ERR, "Probable attempt of attack - incorrect session id!")
-		ngx.exit(ngx.HTTP_UNAUTHORIZED)
+		self.terminate("Probable attempt of attack - incorrect session id!")
 	end
+	return self
+end
+
+function SessionMgr:ifUnauthorizedAccess(terminate)
+	self.terminate = terminate
 	return self
 end
