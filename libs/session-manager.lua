@@ -10,7 +10,6 @@ setmetatable(SessionMgr, {
 function SessionMgr.new(session_store, config)
 	ngx.log(ngx.INFO, "Initiating session manager instance.")
 	assert(session_store ~= nil, "Session store not set!")
-	assert(config.session_seed ~= nil, "SESSION_ID_SEED env variable not set!")
 	local self = setmetatable({}, SessionMgr)
 
 	-- generating session id

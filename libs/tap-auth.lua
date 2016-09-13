@@ -47,8 +47,13 @@ function TapAuth:retriveTokens()
 	local authCode = ngx.var.arg_code
 	local result
 	if authCode == nil then
-		ngx.redirect(self.config.uaa .. "/oauth/authorize?client_id=" .. self.config.client_id ..
-				"&response_type=code")
+		if self.config.uaaAuthorizationUri ~= nil then
+			ngx.redirect(self.config.uaaAuthorizationUri .. "?client_id=" .. self.config.client_id ..
+					"&response_type=code")
+		else
+			ngx.redirect(self.config.uaa .. "/oauth/authorize?client_id=" .. self.config.client_id ..
+					"&response_type=code")
+		end
 	end
 
 	-- getting acces and refresh tokens based on authorization code
