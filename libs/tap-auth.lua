@@ -94,15 +94,6 @@ function TapAuth:refreshAccessTokenMethod()
 	end
 end
 
-function TapAuth:oauth(session)
-	ngx.log(ngx.INFO, "oauth invocation")
-	session:isValidSession()
-	       :aquireOauthTokens(self.retriveTokens, self.refreshAccessToken)
-	       :checkAccess(self:checkIfAuthorizedMethod())
-	       :refreshTokenIfExpired(self:checkExpirationMethod())
-	       :grantAccess(self.ktinit)
-end
-
 function TapAuth:getCACert()
 	local pkey = ngx.shared.public_key:get("pk")
 	if pkey == nil then

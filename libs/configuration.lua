@@ -22,8 +22,8 @@ function Configuration.new()
 end
 
 function Configuration:verify()
-	assert(ngx.shared.session_store ~= nill, "Can't find session store configuration!")
-	assert(ngx.shared.public_key ~= nill, "Can't find public key store!")
+	assert(ngx.shared.session_store ~= nil, "Can't find session store configuration!")
+	assert(ngx.shared.public_key ~= nil, "Can't find public key store!")
 	assert(self.uaa ~= nil, "I don't know where to find uaa? Not set UAA_ADDRESS!")
 	assert(self.client_id ~= nil, "OAUTH_CLIENT_ID not set!")
 	assert(self.client_secret ~= nil, "OAUTH_CLIENT_SECRET not set!")
