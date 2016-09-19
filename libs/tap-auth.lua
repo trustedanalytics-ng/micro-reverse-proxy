@@ -8,7 +8,6 @@ setmetatable(TapAuth, {
 })
 
 function TapAuth.new(conf, jwt, validators, cjson)
-	ngx.log(ngx.INFO, "TAP Auth instance created")
 	assert(conf ~= nil, "Coniguration refers to nil!")
 	assert(jwt ~= nil, "JWT parser refers to nil!")
 	assert(validators  ~= nil, "Validators refers to nil!")
@@ -19,23 +18,27 @@ function TapAuth.new(conf, jwt, validators, cjson)
 	self.jwt = jwt
 	self.validators = validators
 	self.cjson = cjson
-
+	self.ngx = ngx
 	return self
 end
 
+function TapAuth:setNgxContext(context)
+	self.ngx = context
+end
+
 function TapAuth:jsonRespDecode(response)
-	assert(response ~= nil, "Cant retrive token!")
-	if response.status == ngx.HTTP_OK then
+	assert(response ~= nil, "Can't retrive token!")
+	if response.status == self.ngx.HTTP_OK then
 		local res = cjson.decode(response.body)
 		return res
-	elseif response.status == ngx.HTTP_REQUEST_TIMEOUT then
+	elseif response.status == self.ngx.HTTP_REQUEST_TIMEOUT then
 		self.terminateProcessing("UAA server connection timeout!")
-	elseif response.status == ngx.HTTP_BAD_REQUEST then
+	elseif response.status == self.ngx.HTTP_BAD_REQUEST then
 		if response.body ~= nil then
 			local res = cjson.decode(response.body)
 			self.terminateProcessing(res.error .. " - " .. res.error_description)
 		end
-	elseif response.status == ngx.HTTP_UNAUTHORIZED then
+	elseif response.status == self.ngx.HTTP_UNAUTHORIZED then
 		self.terminateProcessing("Bad credentials for oauth client (CLIENT_ID or/and CLIENT_SECRET)!")
 	else
 		self.terminateProcessing("Unrecoginzed response from UAA server! [" .. response.status .. "]")
@@ -44,21 +47,23 @@ end
 
 function TapAuth:retriveTokens()
 	--	redirect user to uaa for obtaining authorization code
-	local authCode = ngx.var.arg_code
+	local authCode = self.ngx.var.arg_code
 	local result
 	if authCode == nil then
 		if self.config.uaaAuthorizationUri ~= nil then
-			ngx.redirect(self.config.uaaAuthorizationUri .. "?client_id=" .. self.config.client_id ..
+			self.ngx.redirect(self.config.uaaAuthorizationUri .. "?client_id=" .. self.config.client_id ..
 					"&response_type=code")
+			return
 		else
-			ngx.redirect(self.config.uaa .. "/oauth/authorize?client_id=" .. self.config.client_id ..
+			self.ngx.redirect(self.config.uaa .. "/oauth/authorize?client_id=" .. self.config.client_id ..
 					"&response_type=code")
+			return
 		end
 	end
 
 	-- getting acces and refresh tokens based on authorization code
-	ngx.req.set_header("content-type", "application/x-www-form-urlencoded;charset=utf-8")
-	local res = ngx.location.capture("/oauth/token", {method = ngx.HTTP_POST,
+	self.ngx.req.set_header("content-type", "application/x-www-form-urlencoded;charset=utf-8")
+	local res = self.ngx.location.capture("/oauth/token", {method = self.ngx.HTTP_POST,
 		body = "grant_type=authorization_code" ..
 				"&code=" .. authCode ..
 				"&client_id=" .. self.config.client_id ..
@@ -66,8 +71,6 @@ function TapAuth:retriveTokens()
 				"&response_type=token"
 			})
 	local resp = self:jsonRespDecode(res)
-	ngx.log(ngx.INFO, "access token: " .. resp.access_token)
-	ngx.log(ngx.INFO, "refresh token: " .. resp.refresh_token)
 	return resp.access_token, resp.refresh_token
 end
 
@@ -78,8 +81,8 @@ function TapAuth:retriveTokensMethod()
 end
 
 function TapAuth:refreshAccessToken(refreshToken)
-	ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded;charset=utf-8")
-	local res = ngx.location.capture("/oauth/token", {method = ngx.HTTP_POST,
+	self.ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded;charset=utf-8")
+	local res = self.ngx.location.capture("/oauth/token", {method = self.ngx.HTTP_POST,
 		body = "grant_type=refresh_token" ..
 				"&refresh_token=" .. refreshToken ..
 				"&client_id=" .. self.config.client_id ..
@@ -95,7 +98,7 @@ function TapAuth:refreshAccessTokenMethod()
 end
 
 function TapAuth:getCACert()
-	local pkey = ngx.shared.public_key:get("pk")
+	local pkey = self.ngx.shared.public_key:get("pk")
 	if pkey == nil then
 		-- 1. get uaa public key from env
 		pkey = self.config.public_key
@@ -105,20 +108,20 @@ function TapAuth:getCACert()
 			local f = io.open(self.config.public_key_file, "rb")
 			pkey = f:read("*all")
 			f:close()
-			ngx.shared.public_key:set("pk", pkey)
+			self.ngx.shared.public_key:set("pk", pkey)
 		end
 		if pkey == nil then
 			-- 3. or retrive it from uaa server
 			pkey = self:retriveCACertFromUaa()
-			ngx.shared.public_key:set("pk", pkey)
+			self.ngx.shared.public_key:set("pk", pkey)
 		end
 	end
 	return pkey
 end
 
 function TapAuth:retriveCACertFromUaa()
-	local resp = ngx.location.capture("/token_key",
-	{ method = ngx.HTTP_GET, args = {} })
+	local resp = self.ngx.location.capture("/token_key",
+	{ method = self.ngx.HTTP_GET, args = {} })
 	local res = self:jsonRespDecode(resp)
 	return res.value
 end
@@ -126,13 +129,14 @@ end
 function TapAuth:verify(public_key, token, claims)
 	jwt:set_alg_whitelist({ RS256 = 1 })
 	local jwt_obj = jwt:verify(public_key, token, claims)
-	table.foreach(jwt_obj, function(k, v) ngx.log(ngx.INFO, tostring(k) .. "=>" .. tostring(v)) end)
+	table.foreach(jwt_obj,
+		            function(k, v) self.ngx.log(self.ngx.INFO, tostring(k) .. "=>" .. tostring(v)) end)
 	return jwt_obj.verified
 end
 
 function TapAuth:identityClaims()
 	return {
-		user_id = self.validators.equals(config.uid)
+		user_id = self.validators.equals(self.config.uid)
 	}
 end
 
@@ -145,7 +149,7 @@ end
 function TapAuth:checkIfAuthorizedMethod()
 	local pk = self:getCACert()
 	return function(token)
-		ngx.log(ngx.INFO, "Check access method invocation! " .. token)
+		self.ngx.log(self.ngx.INFO, "Check access method invocation! " .. token)
 		return self:verify(pk, token, self:identityClaims())
 	end
 end
@@ -153,14 +157,13 @@ end
 function TapAuth:checkExpirationMethod()
 	local pk = self:getCACert()
 	return function(token)
-		ngx.log(ngx.INFO, "Check token method invocation!")
+		self.ngx.log(self.ngx.INFO, "Check token method invocation!")
 		return self:verify(pk, token, self:expirationClaims())
 	end
 end
 
 function TapAuth.ktinit(token)
 	local cmd = string.format("ktinit -t %s -c %s", token, "/tmp/krb5cc")
-	ngx.log(ngx.INFO, "Ktinit invocation!")
 	local exit_code =  os.execute(cmd)
 	if exit_code ~= 0 then
 		error(string.format("Execution failed: %s, [exit code: %02d]", cmd, exit_code))
@@ -170,6 +173,6 @@ function TapAuth.ktinit(token)
 end
 
 function TapAuth:terminateProcessing(message)
-	ngx.log(ngx.ERR, message)
-	ngx.exit(ngx.HTTP_UNAUTHORIZED)
+	self.ngx.log(self.ngx.ERR, message)
+	self.ngx.exit(self.ngx.HTTP_UNAUTHORIZED)
 end
