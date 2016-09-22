@@ -155,4 +155,139 @@ TestTapAuth = {}
 		luaunit.assertEquals(refresh, "refresh")
 	end
 
+	function TestTapAuth:testRefreshAccessToken_givenRefreshToken()
+		local expected = {method = "POST",
+			body = "grant_type=refresh_token&refresh_token=sdlsdlsd&client_id=nginx&client_secret=nginxsecret"}
+		local ngx = {
+			location = {
+				capture = function(url, req)
+					luaunit.assertEquals(url, "/oauth/token")
+					luaunit.assertEquals(req, expected)
+					return {status = 200, body = ""}
+				end
+			},
+			req = {
+				set_header = function(name, value)
+					luaunit.assertEquals(name, "Content-Type")
+					luaunit.assertEquals(value, "application/x-www-form-urlencoded;charset=utf-8")
+				end
+			},
+			HTTP_POST = "POST",
+			HTTP_OK = 200
+		}
+		local config = {
+			client_secret = "nginxsecret",
+			client_id = "nginx"
+		}
+
+		local toTest = TapAuth(config, jwt, validators, cjson)
+		toTest:setNgxContext(ngx)
+		local access_token = toTest:refreshAccessToken("sdlsdlsd")
+		luaunit.assertEquals(access_token, "access")
+	end
+
+	function TestTapAuth:testRetriveCACertFromUaa_()
+		local expected = {method = "GET", args = {}}
+		local ngx = {
+			location = {
+				capture = function(url, req)
+					luaunit.assertEquals(url, "/token_key")
+					luaunit.assertEquals(req, expected)
+					return {status = 200, body = ""}
+				end
+			},
+			req = {
+			},
+			HTTP_GET = "GET",
+			HTTP_OK = 200
+		}
+		local config = {
+			client_secret = "nginxsecret",
+			client_id = "nginx"
+		}
+
+		local toTest = TapAuth(config, jwt, validators, cjson)
+		toTest:setNgxContext(ngx)
+		toTest:retriveCACertFromUaa()
+	end
+
+	function TestTapAuth:testRefreshAccessTokenMethod_mustReturnsFunction()
+		luaunit.assertIsFunction(self.tapAuthObject:refreshAccessTokenMethod())
+	end
+
+	function TestTapAuth:testCheckIfAuthorizedMethod_mustReturnsFunction()
+		local ngx = {
+			shared = {
+				public_key = {
+					get = function(key) return "sdfsfsdfsdfsdf" end
+				}
+			}
+		}
+		local config = {}
+		local toTest = TapAuth(config, jwt, validators, cjson)
+		toTest:setNgxContext(ngx)
+		luaunit.assertIsFunction(toTest:checkIfAuthorizedMethod())
+	end
+
+	function TestTapAuth:testGetCACert_PkcachedInSharedDictReturnsPk()
+		local ngx = {
+			shared = {
+				public_key = {
+					get = function(key) return "public_key_value" end,
+				}
+			}
+		}
+		local config = {}
+		local toTest = TapAuth(config, jwt, validators, cjson)
+		toTest:setNgxContext(ngx)
+		local cacert = toTest:getCACert()
+		luaunit.assertEquals(cacert, "public_key_value")
+	end
+
+	function TestTapAuth:testGetCACert_PkFromConfReturnsPk()
+		local ngx = {
+			shared = {
+				public_key = {
+					get = function(key) return "public_key_value" end,
+					set = function(key, value) end
+				}
+			}
+		}
+		local config = {
+			public_key = "public_key_value"
+		}
+		local toTest = TapAuth(config, jwt, validators, cjson)
+		toTest:setNgxContext(ngx)
+		local cacert = toTest:getCACert()
+		luaunit.assertEquals(cacert, "public_key_value")
+	end
+
+	function TestTapAuth:testGetCACert_PkFromUAAReturnsPk()
+		local ngx = {
+			shared = {
+				public_key = {
+					get = function(key) return nil end,
+					set = function(key, value) end
+				},
+			},
+			location = {
+				capture = function(url, req)
+					luaunit.assertEquals("/token_key", url)
+					return {
+						status = 200,
+						body = nil
+					}
+				end
+			},
+			HTTP_OK = 200
+		}
+		local config = {
+			public_key = nil
+		}
+		local toTest = TapAuth(config, jwt, validators, cjson)
+		toTest:setNgxContext(ngx)
+		local cacert = toTest:getCACert()
+		luaunit.assertEquals(cacert, "public_key_value")
+	end
+
 os.exit(luaunit.LuaUnit.run())

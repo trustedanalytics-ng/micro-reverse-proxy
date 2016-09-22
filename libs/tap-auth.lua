@@ -102,7 +102,7 @@ function TapAuth:getCACert()
 	if pkey == nil then
 		-- 1. get uaa public key from env
 		pkey = self.config.public_key
-		ngx.shared.public_key:set("pk", pkey)
+		self.ngx.shared.public_key:set("pk", pkey)
 		if pkey == nil and self.config.public_key_file ~= nil then
 			-- 2. or from file, if file location is set
 			local f = io.open(self.config.public_key_file, "rb")

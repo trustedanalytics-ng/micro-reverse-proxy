@@ -110,7 +110,7 @@ function SessionMgr:isValidSession()
 	local session_id = ngx.var.cookie_session;
 	if session_id ~= nil
 			and session_id ~= self.session_id then
-		self.terminate("Probable attempt of attack - incorrect session id!")
+		self.terminate("Probable attempt of an attack - incorrect session id!")
 	end
 	return self
 end
