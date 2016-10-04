@@ -7,27 +7,28 @@ setmetatable(SessionMgr, {
 	end,
 })
 
-function SessionMgr.new(session_store, config)
-	ngx.log(ngx.INFO, "Initiating session manager instance.")
-	assert(session_store ~= nil, "Session store not set!")
+function SessionMgr.new(context, config)
+	assert(context.shared.session_store ~= nil, "Session store not set!")
 	local self = setmetatable({}, SessionMgr)
 
 	-- generating session id
 	local md5Inst = md5:new()
 	local str = require "resty.string"
-	md5Inst:update(config.uid)
+	if config.uid ~= nil then
+		md5Inst:update(config.uid)
+	end
 	md5Inst:update(config.session_seed)
 	local digest = md5Inst:final()
 	self.session_id = str.to_hex(digest)
-
-	self.store = session_store
+	self.store = context.shared.session_store
+	self.ngx = context
 	self.access_token = nil
 	self.refresh_token = nil
 	return self
 end
 
 function SessionMgr:aquireOauthTokens(aquisitionMethod, refreshMethod)
-	local session_id = ngx.var.cookie_session;
+	local session_id = self.ngx.var.cookie_session;
 	self.tokensAquisitionMethod = aquisitionMethod
 	self.accessTokenRefreshMethod = refreshMethod
 	self.access_token = self:get_access_token();
@@ -49,12 +50,12 @@ end
 
 function SessionMgr:refreshTokenIfExpired(checkIfNotExpired)
 	if not checkIfNotExpired(self.access_token) then
-		ngx.log(ngx.INFO, "Access token expired! " .. self.access_token)
+		self.ngx.log(self.ngx.INFO, "Access token expired! " .. self.access_token)
 		if not checkIfNotExpired(self.refresh_token) then
-			ngx.log(ngx.INFO, "Refresh token expired. " .. self.refresh_token)
+			self.ngx.log(self.ngx.INFO, "Refresh token expired. " .. self.refresh_token)
 			self.access_token,self.refresh_token = self.tokensAquisitionMethod()
 		else
-			ngx.log(ngx.INFO, "Refreshing access token using refresh token! " .. self.refresh_token)
+			self.ngx.log(self.ngx.INFO, "Refreshing access token using refresh token! " .. self.refresh_token)
 			self.access_token = self.accessTokenRefreshMethod(self.refresh_token)
 		end
 	end
@@ -84,12 +85,12 @@ function SessionMgr:get_session_id()
 end
 
 function SessionMgr:grantAccess(grantingAccessMethod)
-	local session_id = ngx.var.cookie_session;
+	local session_id = self.ngx.var.cookie_session;
 	if session_id == nil then
 		local expires = 60 * 60
 		session_id = self.session_id
-		ngx.header["Set-Cookie"] =
-		string.format("session=%s; Path=/; Expires=%s", session_id, ngx.cookie_time(ngx.time() + expires))
+		self.ngx.header["Set-Cookie"] =
+		string.format("session=%s; Path=/; Expires=%s", session_id, self.ngx.cookie_time(self.ngx.time() + expires))
 	end
 	local stored_access_token = self:get_access_token()
 	local stored_refresh_token = self:get_refresh_token()
@@ -107,7 +108,7 @@ function SessionMgr:grantAccess(grantingAccessMethod)
 end
 
 function SessionMgr:isValidSession()
-	local session_id = ngx.var.cookie_session;
+	local session_id = self.ngx.var.cookie_session;
 	if session_id ~= nil
 			and session_id ~= self.session_id then
 		self.terminate("Probable attempt of an attack - incorrect session id!")

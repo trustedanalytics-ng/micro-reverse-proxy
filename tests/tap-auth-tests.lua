@@ -1,6 +1,6 @@
 luaunit = require "luaunit"
 
-ngx = {
+local ngx = {
 	var = {
 		arg_code = nil
 	},
@@ -23,10 +23,9 @@ ngx = {
 
 require "tap-auth"
 require "configuration"
-jwt = require "resty.jwt"
-validators = require "resty.jwt-validators"
-cjson = require "cjson"
-md5 = require "resty.md5"
+local jwt = require "resty.jwt"
+local validators = require "resty.jwt-validators"
+local cjson = require "cjson"
 
 TestConfiguration = {}
 	function TestConfiguration:setUp()
@@ -45,6 +44,7 @@ TestTapAuth = {}
 			uaa = "http://uaa.jojo"
 		}
 		self.tapAuthObject = TapAuth(config, jwt, validators, cjson)
+		self.tapAuthObject:setNgxContext(ngx)
 	end
 
 	function TestTapAuth:testJsonRespDecode_HTTP_OK_status_reponse()

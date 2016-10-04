@@ -18,7 +18,6 @@ function TapAuth.new(conf, jwt, validators, cjson)
 	self.jwt = jwt
 	self.validators = validators
 	self.cjson = cjson
-	self.ngx = ngx
 	return self
 end
 
@@ -29,13 +28,13 @@ end
 function TapAuth:jsonRespDecode(response)
 	assert(response ~= nil, "Can't retrive token!")
 	if response.status == self.ngx.HTTP_OK then
-		local res = cjson.decode(response.body)
+		local res = self.cjson.decode(response.body)
 		return res
 	elseif response.status == self.ngx.HTTP_REQUEST_TIMEOUT then
 		self.terminateProcessing("UAA server connection timeout!")
 	elseif response.status == self.ngx.HTTP_BAD_REQUEST then
 		if response.body ~= nil then
-			local res = cjson.decode(response.body)
+			local res = self.cjson.decode(response.body)
 			self.terminateProcessing(res.error .. " - " .. res.error_description)
 		end
 	elseif response.status == self.ngx.HTTP_UNAUTHORIZED then
@@ -128,7 +127,7 @@ end
 
 function TapAuth:verify(public_key, token, claims)
 	jwt:set_alg_whitelist({ RS256 = 1 })
-	local jwt_obj = jwt:verify(public_key, token, claims)
+	local jwt_obj = self.jwt:verify(public_key, token, claims)
 	table.foreach(jwt_obj,
 		            function(k, v) self.ngx.log(self.ngx.INFO, tostring(k) .. "=>" .. tostring(v)) end)
 	return jwt_obj.verified

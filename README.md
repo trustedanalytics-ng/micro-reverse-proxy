@@ -65,3 +65,6 @@ For correctness verification you can use this example commands:
 curl -H "Authorization: Bearer `uaac context jojo | grep access_token | sed -e 's/access_token\:\ //' | sed -e 's/^[ \t]*//'`" -X GET http://nginx.localnet:8080
 wscat -H "Authorization: Bearer `uaac context jojo | grep access_token | sed -e 's/access_token\:\ //' | sed -e 's/^[ \t]*//'`" -c ws://nginx.localnet:8080/websockets
 ```
+
+### How to run unit tests?
+[Manual](unittests/README.md)
