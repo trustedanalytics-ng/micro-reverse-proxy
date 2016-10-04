@@ -48,7 +48,7 @@ Shared volumes:
 *  /root/logs - directory for nginx error, access logs
 *  /libs - directory for tap-auth module code
 *  /etc/krb5.conf - kerberos client configuration
-*  /var/krb5kdc/cacert.pem certificate used in pre-authentication phase
+*  /etc/krb5.cacert.pem certificate used in pre-authentication phase
 *  /tmp - directory that holds obtained kerberos credentials (krb5cc)
 
 ## HOW TO RUN PROXY?
