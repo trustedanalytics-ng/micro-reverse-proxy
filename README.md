@@ -1,5 +1,6 @@
-# Tap-auth-proxy.
+# Micro-revers-proxy.
 Reverse proxy for hiding/guard unsecured web applications. Solution based on [openresty](https://openresty.org) project.
+
 
 ## DESCRIPTION
 Check user access and forward http/websockets requests to guarded web application.
@@ -15,7 +16,7 @@ Building docker image containing openresty with required lua libraries:
 
 Before start building you have to get base image. Bellow you can find link to repo with scripts that facilitate that.:
 ```
-https://github.com/intel-data/tapng-base-images/tree/master/binary/binary-jessie
+https://github.com/intel-data/tap-base-images/tree/master/binary/binary-jessie
 ```
 
 Docker image is build in two steps:

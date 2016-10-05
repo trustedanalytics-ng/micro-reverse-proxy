@@ -175,3 +175,9 @@ function TapAuth:terminateProcessing(message)
 	self.ngx.log(self.ngx.ERR, message)
 	self.ngx.exit(self.ngx.HTTP_UNAUTHORIZED)
 end
+
+function TapAuth:terminateProcessingMethod()
+	return function(message)
+		self:terminateProcessing(message)
+	end
+end
