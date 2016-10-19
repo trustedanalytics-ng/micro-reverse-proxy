@@ -135,7 +135,7 @@ end
 
 function TapAuth:identityClaims()
 	return {
-		user_id = self.validators.equals(self.config.uid)
+		user_name = self.validators.equals(self.config.uid)
 	}
 end
 
