@@ -24,6 +24,7 @@ function SessionMgr.new(context, config)
 	self.ngx = context
 	self.access_token = nil
 	self.refresh_token = nil
+	self.terminate = function(message) end
 	return self
 end
 

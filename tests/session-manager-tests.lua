@@ -28,7 +28,7 @@ TestSessionManger = {}
 		luaunit:assertIsTable(sessionMgr)
 	end
 
-  function TestSessionManger:testDoSome()
+  function TestSessionManger:testSessionValidation_incorrectSessionIdDetected_terminateProcessingReqest()
 		local ngx = {
 			shared = {
 				session_store = {}
@@ -52,6 +52,90 @@ TestSessionManger = {}
 		session:ifUnauthorizedAccess(tap_auth:terminateProcessingMethod())
 		       :isValidSession()
 	end
+
+	function TestSessionManger:testRefreshToken_accessTokenExpired_refreshTokeAction()
+		local ngx = {
+			shared = {
+				session_store = {
+					set = function(self, key, value) end,
+					get = function(self, key) end
+				}
+			},
+			var = {
+				cookie_session = "sdasd"
+			},
+			log = function(level, message) end
+		}
+		local config = {}
+		local refreshCallsNum = 0
+		local tap_auth = TapAuth(config, jwt, validators, cjson)
+		tap_auth:setNgxContext(ngx)
+		local checkIfExpired = function(token)
+			if ("jwt_access_token" == token) then
+				return false
+			end
+			return true
+		end
+		local tokenAquisitonMethod = function() return "jwt_access_token", "jwt_refresh_token" end
+		local tokenRefreshMethod = function(token)
+			refreshCallsNum = refreshCallsNum + 1
+			return token
+		end
+		local session = SessionMgr(ngx, config):aquireOauthTokens(tokenAquisitonMethod, tokenRefreshMethod)
+		                                       :refreshTokenIfExpired(checkIfExpired)
+		luaunit.assertEquals(refreshCallsNum, 1)
+	end
+
+	function TestSessionManger:testRefreshToken_accessTokenExpired_aquireOauthTokensAction()
+		local ngx = {
+			shared = {
+				session_store = {
+					set = function(self, key, value) end,
+					get = function(self, key) end
+				}
+			},
+			var = {
+				cookie_session = "sdasd"
+			},
+			log = function(level, message) end
+		}
+		local aquisitionCallsNum = 0
+		local config = {}
+		local tap_auth = TapAuth(config, jwt, validators, cjson)
+		tap_auth:setNgxContext(ngx)
+		local checkIfExpired = function(token) return false end
+		local tokenAquisitonMethod = function()
+			aquisitionCallsNum = aquisitionCallsNum + 1
+			return "jwt_access_token", "jwt_refresh_token"
+		end
+		local session = SessionMgr(ngx, config):aquireOauthTokens(tokenAquisitonMethod, nil)
+		                                       :refreshTokenIfExpired(checkIfExpired)
+		luaunit.assertEquals(aquisitionCallsNum, 2)
+	end
+
+	function TestSessionManger:testAquireOauthTokens_()
+		local ngx = {
+			shared = {
+				session_store = {
+					set = function(self, key, value) end,
+					get = function(self, key) end
+				}
+			},
+			var = {
+				cookie_session = nil
+			},
+			log = function(level, message) end
+		}
+		local config = {}
+		local aquisitionCallsNum = 0
+		local tokenAquisitonMethod = function()
+			aquisitionCallsNum = aquisitionCallsNum + 1
+			return "jwt_access_token", "jwt_refresh_token"
+		end
+		local session = SessionMgr(ngx, config):aquireOauthTokens(tokenAquisitonMethod, nil)
+		luaunit.assertEquals(aquisitionCallsNum, 1)
+	end
+
 
 os.exit(luaunit.LuaUnit.run())
 
