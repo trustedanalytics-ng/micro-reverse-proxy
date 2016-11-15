@@ -1,4 +1,4 @@
-FROM tap-base-binary:binary-jessie
+FROM tapimages.us.enableiot.com:8080/tap-base-binary:binary-jessie
 
 WORKDIR /root/
 
