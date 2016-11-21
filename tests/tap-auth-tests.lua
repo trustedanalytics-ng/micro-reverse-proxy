@@ -296,7 +296,7 @@ TestTapAuth = {}
 		}
 		local toTest = TapAuth(config, jwt, validators, cjson)
 		toTest.writeAccessToken("some_access_token")
-		local file = io.open(TapAuth.TEMP_DIR_PATH .. TapAuth.ACCESS_TOKEN_FILE_NAME, "r")
+		local file = io.open(TapAuth.TEMP_DIR_PATH .. "/" .. TapAuth.ACCESS_TOKEN_FILE_NAME, "r")
 		local actual = file:read()
 		file:close()
 		luaunit.assertEquals(actual, "some_access_token")
@@ -308,7 +308,7 @@ TestTapAuth = {}
 		}
 		local toTest = TapAuth(config, jwt, validators, cjson)
 		toTest.writeRefreshToken("some_refresh_token")
-		local file = io.open(TapAuth.TEMP_DIR_PATH .. TapAuth.REFRESH_TOKEN_FILE_NAME, "r")
+		local file = io.open(TapAuth.TEMP_DIR_PATH .. "/" .. TapAuth.REFRESH_TOKEN_FILE_NAME, "r")
 		local actual = file:read()
 		file:close()
 		luaunit.assertEquals(actual, "some_refresh_token")
