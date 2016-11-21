@@ -81,8 +81,8 @@ TestSessionManger = {}
 			refreshCallsNum = refreshCallsNum + 1
 			return token
 		end
-		local session = SessionMgr(ngx, config):aquireOauthTokens(tokenAquisitonMethod, tokenRefreshMethod)
-		                                       :refreshTokenIfExpired(checkIfExpired)
+		SessionMgr(ngx, config):aquireOauthTokens(tokenAquisitonMethod, tokenRefreshMethod)
+		                       :refreshTokenIfExpired(checkIfExpired)
 		luaunit.assertEquals(refreshCallsNum, 1)
 	end
 
@@ -108,12 +108,12 @@ TestSessionManger = {}
 			aquisitionCallsNum = aquisitionCallsNum + 1
 			return "jwt_access_token", "jwt_refresh_token"
 		end
-		local session = SessionMgr(ngx, config):aquireOauthTokens(tokenAquisitonMethod, nil)
-		                                       :refreshTokenIfExpired(checkIfExpired)
+		SessionMgr(ngx, config):aquireOauthTokens(tokenAquisitonMethod, nil)
+		                       :refreshTokenIfExpired(checkIfExpired)
 		luaunit.assertEquals(aquisitionCallsNum, 2)
 	end
 
-	function TestSessionManger:testAquireOauthTokens_()
+	function TestSessionManger:testAquireOauthTokens_expectedAquisitionMethodCall()
 		local ngx = {
 			shared = {
 				session_store = {
@@ -132,10 +132,48 @@ TestSessionManger = {}
 			aquisitionCallsNum = aquisitionCallsNum + 1
 			return "jwt_access_token", "jwt_refresh_token"
 		end
-		local session = SessionMgr(ngx, config):aquireOauthTokens(tokenAquisitonMethod, nil)
+		SessionMgr(ngx, config):aquireOauthTokens(tokenAquisitonMethod, nil)
 		luaunit.assertEquals(aquisitionCallsNum, 1)
 	end
 
+	function TestSessionManger:testGrantAccess_accesTokenNeedsToBeRefreshed()
+		local actualTokenValue = {
+			refresh_token = nil,
+			access_token = nil
+		}
+		local ngx = {
+			shared = {
+				session_store = {
+					set = function(self, key, value)
+						actualTokenValue[key] = value
+					end,
+					get = function(self, key)
+						if key == "access_token" then
+							return "stored_access_token"
+						elseif key == "access_token" then
+							return "stored_access_token"
+						end
+					end
+				}
+			},
+			var = {
+				cookie_session = "sessionid"
+			}
+		}
+		local config = {}
+		local tokenAquisitonMethod = function()
+			return "fresh_access_token", "fresh_refresh_token"
+		end
+		local grantingAccessCallsNum = 0
+		local grantingAccessMethod = function()
+			grantingAccessCallsNum = grantingAccessCallsNum + 1
+			return 0
+		end
+
+		SessionMgr(ngx, config):aquireOauthTokens(tokenAquisitonMethod, nil):grantAccess(grantingAccessMethod)
+		luaunit.assertEquals(actualTokenValue['refresh_token'], "fresh_refresh_token")
+		luaunit.assertEquals(actualTokenValue['access_token'], "fresh_access_token")
+		luaunit.assertEquals(grantingAccessCallsNum, 1)
+	end
 
 os.exit(luaunit.LuaUnit.run())
-

@@ -290,4 +290,28 @@ TestTapAuth = {}
 		luaunit.assertEquals(cacert, "public_key_value")
 	end
 
+	function TestTapAuth:testWriteAccessToken_tokenWritenInFileOnFirstLine()
+		local config = {
+			public_key = nil
+		}
+		local toTest = TapAuth(config, jwt, validators, cjson)
+		toTest.writeAccessToken("some_access_token")
+		local file = io.open(TapAuth.TEMP_DIR_PATH .. TapAuth.ACCESS_TOKEN_FILE_NAME, "r")
+		local actual = file:read()
+		file:close()
+		luaunit.assertEquals(actual, "some_access_token")
+	end
+
+	function TestTapAuth:testWriteRefreshToken_tokenWritenInFileOnFirstLine()
+		local config = {
+			public_key = nil
+		}
+		local toTest = TapAuth(config, jwt, validators, cjson)
+		toTest.writeRefreshToken("some_refresh_token")
+		local file = io.open(TapAuth.TEMP_DIR_PATH .. TapAuth.REFRESH_TOKEN_FILE_NAME, "r")
+		local actual = file:read()
+		file:close()
+		luaunit.assertEquals(actual, "some_refresh_token")
+	end
+
 os.exit(luaunit.LuaUnit.run())

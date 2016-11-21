@@ -1,5 +1,8 @@
 TapAuth = {}
 TapAuth.__index = TapAuth
+TapAuth.TEMP_DIR_PATH = "/tmp"
+TapAuth.ACCESS_TOKEN_FILE_NAME = ".access_token"
+TapAuth.REFRESH_TOKEN_FILE_NAME = ".refresh_token"
 
 setmetatable(TapAuth, {
 	__call = function (cls, ...)
@@ -105,6 +108,9 @@ function TapAuth:getCACert()
 		if pkey == nil and self.config.public_key_file ~= nil then
 			-- 2. or from file, if file location is set
 			local f = io.open(self.config.public_key_file, "rb")
+			if f == nil then
+				self:terminateProcessing("Uaa public key file not found: " .. self.config.public_key_file)
+			end
 			pkey = f:read("*all")
 			f:close()
 			self.ngx.shared.public_key:set("pk", pkey)
@@ -134,6 +140,8 @@ function TapAuth:verify(public_key, token, claims)
 end
 
 function TapAuth:identityClaims()
+	-- identity checking is made basing on user name
+	-- decoded from jwt
 	return {
 		user_name = self.validators.equals(self.config.uid)
 	}
@@ -162,7 +170,7 @@ function TapAuth:checkExpirationMethod()
 end
 
 function TapAuth.ktinit(token)
-	local cmd = string.format("ktinit -t %s -c %s", token, "/tmp/krb5cc")
+	local cmd = string.format("ktinit -t %s -c %s%s", token, TapAuth.TEMP_DIR_PATH, "/krb5cc")
 	local exit_code =  os.execute(cmd)
 	if exit_code ~= 0 then
 		error(string.format("Execution failed: %s, [exit code: %02d]", cmd, exit_code))
@@ -180,4 +188,20 @@ function TapAuth:terminateProcessingMethod()
 	return function(message)
 		self:terminateProcessing(message)
 	end
+end
+
+function TapAuth.writeInFile(filePath, content)
+	local file = io.open(filePath, "w+")
+	if file ~= nil then
+		file:write(content)
+		file:close()
+	end
+end
+
+function TapAuth.writeAccessToken(token)
+	TapAuth.writeInFile(TapAuth.TEMP_DIR_PATH .. "/" .. TapAuth.ACCESS_TOKEN_FILE_NAME, token)
+end
+
+function TapAuth.writeRefreshToken(token)
+	TapAuth.writeInFile(TapAuth.TEMP_DIR_PATH .. "/" .. TapAuth.REFRESH_TOKEN_FILE_NAME, token)
 end

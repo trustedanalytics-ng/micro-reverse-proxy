@@ -55,11 +55,15 @@ Shared volumes:
 ## HOW TO RUN PROXY?
 on your local machine.
 ```
-docker run -e JWT_PUBLIC_KEY=$'-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqh...\n-----END PUBLIC KEY-----' -e USER_ID='dfde9e8c-b527-4bba-9331-66045df87af3' --volume="$PWD/conf:/root/conf" --volume="$PWD/logs/:/root/logs" --volume="$PWD/libs:/libs" --volume="$PWD/tmp:/tmp" --volume="/etc/krb5.conf:/etc/krb5.conf" --volume="/var/krb5kdc/cacert.pem:/var/krb5kdc/cacert.pem" --net=poligonnet --ip 172.18.0.6 --dns=172.17.0.1 -h nginx.localnet --name "nginx" -p 8081:8080 -d -t mrp
+docker run -e JWT_PUBLIC_KEY=$'-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqh...\n-----END PUBLIC KEY-----' -e USER_ID='jojo' --volume="$PWD/conf:/root/conf" --volume="$PWD/logs/:/root/logs" --volume="$PWD/libs:/libs" --volume="$PWD/tmp:/tmp" --volume="/etc/krb5.conf:/etc/krb5.conf" --volume="/var/krb5kdc/cacert.pem:/var/krb5kdc/cacert.pem" --net=poligonnet --ip 172.18.0.6 --dns=172.17.0.1 -h nginx.localnet --name "nginx" -p 8081:8080 -d -t mrp
 ```
 or
 ```
-docker run -e SESSION_ID_SEED='somesecretphrase' -e UAA_ADDRESS='http://uaa.localnet' -e JWT_PUBLIC_KEY_FILE='/tmp/key.pem' -e OAUTH_CLIENT_ID='nginx' -e OAUTH_CLIENT_SECRET='nginxsecret' -e USER_ID='abf116c7-e03b-4c94-a574-df537173b9d4' --volume="$PWD/conf:/root/conf" --volume="$PWD/logs/:/root/logs" --volume="$PWD/libs:/libs" --volume="$PWD/tmp:/tmp" --volume="/etc/krb5.conf:/etc/krb5.conf" --volume="/var/krb5kdc/cacert.pem:/var/krb5kdc/cacert.pem" --net=poligonnet --ip 172.18.0.6 --dns=172.17.0.1 -h nginx.localnet --name "nginx" -p 8081:8080 -d -t mrp
+docker run -e SESSION_ID_SEED='somesecretphrase' -e UAA_ADDRESS='http://uaa.localnet:8080' -e JWT_PUBLIC_KEY_FILE='/tmp/key.pem' -e OAUTH_CLIENT_ID='nginx' -e OAUTH_CLIENT_SECRET='nginxsecret' -e USER_ID='jojo' --volume="$PWD/conf:/root/conf" --volume="$PWD/logs/:/root/logs" --volume="$PWD/libs:/libs" --volume="$PWD/tmp:/tmp" --volume="/etc/krb5.conf:/etc/krb5.conf" --volume="/var/krb5kdc/cacert.pem:/var/krb5kdc/cacert.pem" --net=poligonnet --ip 172.18.0.6 --dns=172.17.0.1 -h nginx.localnet --name "nginx" -p 8081:8080 -d -t mrp
+```
+or
+```
+docker run -e SESSION_ID_SEED='somesecretphrase' -e UAA_ADDRESS='http://uaa.localnet:8080' -e OAUTH_CLIENT_ID='nginx' -e OAUTH_CLIENT_SECRET='nginxsecret' -e USER_ID='jojo' --volume="$PWD/conf:/root/conf" --volume="$PWD/logs/:/root/logs" --volume="$PWD/libs:/libs" --volume="$PWD/tmp:/tmp" --volume="/etc/krb5.conf:/etc/krb5.conf" --volume="/var/krb5kdc/cacert.pem:/var/krb5kdc/cacert.pem" --net=poligonnet --ip 172.18.0.6 --dns=172.17.0.1 -h nginx.localnet --name "nginx" -p 8081:8080 -d -t mrp
 ```
 For correctness verification you can use this example commands:
 ```

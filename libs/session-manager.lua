@@ -25,6 +25,10 @@ function SessionMgr.new(context, config)
 	self.access_token = nil
 	self.refresh_token = nil
 	self.terminate = function(message) end
+	self.tokensAquisitionMethod = nil
+	self.accessTokenRefreshMethod = nil
+	self.accessTokenStoringMethod = nil
+	self.refreshTokenStoringMethod = nil
 	return self
 end
 
@@ -65,6 +69,10 @@ end
 
 function SessionMgr:set_access_token(token)
 	local succ, err, forcible = self.store:set("access_token", token)
+	if succ and
+		 self.accessTokenStoringMethod ~= nil then
+		self.accessTokenStoringMethod(token)
+	end
 end
 
 function SessionMgr:get_access_token()
@@ -74,6 +82,11 @@ end
 
 function SessionMgr:set_refresh_token(token)
 	local succ, err, forcible = self.store:set("refresh_token", token)
+	if succ and
+			self.refreshTokenStoringMethod ~= nil then
+		self.refreshTokenStoringMethod(token)
+	end
+
 end
 
 function SessionMgr:get_refresh_token()
@@ -85,19 +98,12 @@ function SessionMgr:get_session_id()
 	return self.session_id
 end
 
-function SessionMgr:grantAccess(grantingAccessMethod)
-	local session_id = self.ngx.var.cookie_session;
-	if session_id == nil then
-		local expires = 60 * 60
-		session_id = self.session_id
-		self.ngx.header["Set-Cookie"] =
-		string.format("session=%s; Path=/; Expires=%s", session_id, self.ngx.cookie_time(self.ngx.time() + expires))
-	end
+function SessionMgr:replaceStoredTokens(grantingAccessMethod)
 	local stored_access_token = self:get_access_token()
 	local stored_refresh_token = self:get_refresh_token()
 	if self.access_token ~= stored_access_token then
 		if grantingAccessMethod(self.access_token) ~= 0 then
-			self.terminate("Granting access method error!")
+			self.terminate("Granting access method call treminated with error!")
 		else
 			self:set_access_token(self.access_token)
 		end
@@ -106,6 +112,23 @@ function SessionMgr:grantAccess(grantingAccessMethod)
 		self:set_refresh_token(self.refresh_token)
 	end
 	return self
+end
+
+function SessionMgr:sessionExpireAfter(expirationTime)
+	local session_id = self.ngx.var.cookie_session;
+	if session_id == nil then
+		session_id = self.session_id
+		self.ngx.header["Set-Cookie"] =
+		string.format("session=%s; Path=/; Expires=%s",
+			session_id,
+			self.ngx.cookie_time(self.ngx.time() + expirationTime))
+	end
+	return self
+end
+
+function SessionMgr:grantAccess(grantingAccessMethod)
+	return self:replaceStoredTokens(grantingAccessMethod)
+	           :sessionExpireAfter(60 * 60)
 end
 
 function SessionMgr:isValidSession()
@@ -119,5 +142,11 @@ end
 
 function SessionMgr:ifUnauthorizedAccess(terminate)
 	self.terminate = terminate
+	return self
+end
+
+function SessionMgr:toStoreTokensUseMethods(accessTokenStoringMethod, refreshTokenStoringMethod)
+	self.accessTokenStoringMethod = accessTokenStoringMethod
+	self.refreshTokenStoringMethod = refreshTokenStoringMethod
 	return self
 end
