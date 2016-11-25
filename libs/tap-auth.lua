@@ -139,9 +139,9 @@ function TapAuth:verify(public_key, token, claims)
 	return jwt_obj.verified
 end
 
+-- Identity checking is made based on user name
+-- decoded from jwt.
 function TapAuth:identityClaims()
-	-- identity checking is made basing on user name
-	-- decoded from jwt
 	return {
 		user_name = self.validators.equals(self.config.uid)
 	}
