@@ -151,7 +151,7 @@ function SessionMgr:initSession()
 end
 
 --[[
-   Acquies access/refresh the tokens. Stores obtained tokens in the session.
+   Acquires access/refresh the tokens. Stores obtained tokens in the session.
 
    @returns self reference
 -- ]]
