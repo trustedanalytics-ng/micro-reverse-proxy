@@ -54,7 +54,7 @@ end
 
 function MrpModule:turnOnAuthTokensSharnig()
 	assert(self.sessionMgr  ~= nil, "MrpModule must be initialized before using it!")
-	if self.ngx.var.sharing_auth_tokens == "on" then
+	if self.ngx.var.mrp_sharing_auth_tokens == "on" then
 		self.sessionMgr:toStoreTokensUseMethods(self.tap_auth.writeAccessToken, self.tap_auth.writeRefreshToken)
 	end
 	return self.sessionMgr
@@ -62,7 +62,7 @@ end
 
 function MrpModule:turnOnCheckingAccess()
 	assert(self.sessionMgr  ~= nil, "MrpModule must be initialized before using it!")
-	if self.ngx.var.authorization == "on" then
+	if self.ngx.var.mrp_authorization == "on" then
 		self.sessionMgr:toCheckingAccessUse(self.tap_auth:checkIfAuthorizedMethod())
 	end
 	return self.sessionMgr
@@ -70,7 +70,7 @@ end
 
 function MrpModule:triggerCheckingAccess()
 	assert(self.sessionMgr  ~= nil, "MrpModule must be initialized before using it!")
-	if self.ngx.var.authorization == "on" then
+	if self.ngx.var.mrp_authorization == "on" then
 		self.sessionMgr:checkAccess()
 	end
 	return self.sessionMgr
@@ -78,7 +78,7 @@ end
 
 function MrpModule:turnOnKerberos()
 	assert(self.sessionMgr  ~= nil, "MrpModule must be initialized before using it!")
-	if self.ngx.var.kerberos == "on" then
+	if self.ngx.var.mrp_kerberos == "on" then
 		self.sessionMgr:grantAccess(self.tap_auth.ktinit)
 	else
 		self.sessionMgr:grantAccess(function(token) return 0 end)
