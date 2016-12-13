@@ -1,4 +1,4 @@
-# Micro-revers-proxy, how to prepare and run unit tests?
+# Micro-reverse-proxy, how to prepare and run unit tests?
 1) Creating compilation environment.
 ```
 cd unittests

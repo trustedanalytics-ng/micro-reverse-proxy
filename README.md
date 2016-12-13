@@ -1,4 +1,4 @@
-# Micro-revers-proxy.
+# Micro-reverse-proxy.
 Reverse proxy for hiding/guard unsecured web applications. Solution based on [openresty](https://openresty.org) project.
 
 
