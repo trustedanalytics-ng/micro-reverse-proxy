@@ -1,6 +1,8 @@
 # Micro-reverse-proxy.
 Reverse proxy for hiding/guard unsecured web applications. Solution based on [openresty](https://openresty.org) project.
 
+##OVERVIEW
+![](wikiimages/micro_rev_proxy.png)
 
 ## DESCRIPTION
 Check user access and forward http/websockets requests to guarded web application.
@@ -28,10 +30,21 @@ docker run --rm --volume="$PWD/target:/opt" --volume="$PWD/target:/target" -t mr
 ```
 * Second, assemble image with openresty binaries and required dependecies
 ```
-docker build -t mrp_build -f Dockerfile .
+docker build -t mrp -f Dockerfile .
 ```
 
 ## PROXY CONFIGURATION
+
+### mrp-module configuration
+Reference configuration of proxy, with **mrp-module**, can be found in [conf/nginx.conf](conf/nginx.conf). 
+
+**mrp-module** recognizes following switches:
+* $mrp_kerberos - switch on/off kerberos authentication
+* $mrp_sharing_auth_tokens - switch on/off oauth2 access/refresh tokens sharing mechanism
+* $mrp_authorization - switch on/off authorization, if it is off, access is allowed for all users who hold valid access token   
+
+For more flexibility, i.e when you what inject some custom authorization logic you can configure the proxy excluding **mrp-module** [conf/generic.nginx.conf](conf/generic.nginx.conf).
+
 Environment variables:
 *  JWT_PUBLIC_KEY - optional, uaa public key (i.e.: '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqh...\n-----END PUBLIC KEY-----')
 *  JWT_PUBLIC_KEY_FILE - optional, uaa public key file location on local filesystem
