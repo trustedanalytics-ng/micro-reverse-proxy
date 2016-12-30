@@ -6,7 +6,7 @@ Reverse proxy for hiding/guard unsecured web applications. Solution based on [op
 
 ## DESCRIPTION
 Check user access and forward http/websockets requests to guarded web application.
-Verification on the basis of JWT token, obtained from "Authorization:" header. Checks token signature, expiration time
+Verification on the basis of JWT token, obtained using oauth 2.0 Authorization Code flow. Checks token signature, expiration time
 and user_name (if user_name equals the value from USER_ID environment variable).
 
 ## BUILDING
